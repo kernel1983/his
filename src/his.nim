@@ -9,6 +9,8 @@ type
   Stored = object
     cmd: string
     fav: bool
+  SortMode = enum
+    smTime, smFav
 
 var
   items: seq[Stored]
@@ -24,6 +26,7 @@ var
   keyFd: cint = -1
   listTopRow = 1
   prevBlockH = 0
+  sortMode = smTime
 
 when not defined(windows):
   var origTermios: Termios
@@ -192,6 +195,13 @@ proc applyFilter() =
     filtered = prefixHits & containsHits
   else:
     for i in 0 ..< items.len: filtered.add i
+  if sortMode == smFav:
+    # Stable partition: favorites first, preserving relative order within each group.
+    var favs, rest: seq[int]
+    for idx in filtered:
+      if items[idx].fav: favs.add idx
+      else: rest.add idx
+    filtered = favs & rest
   if cursor >= filtered.len:
     cursor = max(0, filtered.len - 1)
   top = 0
@@ -282,11 +292,12 @@ proc render() =
 
   let title = " his "
   let filterStr = if filter.len > 0: " /" & filter & " " else: ""
+  let modeStr = (if sortMode == smFav: " fav " else: " time ")
   let statusStr = " " & $filtered.len & "/" & $items.len & " fav:" & $favOrder.len & " "
 
   stderr.setForegroundColor(fgWhite)
   stderr.setBackgroundColor(bgBlue)
-  stderr.styledWriteLine(styleBright, title, " ".repeat(max(0, termW - title.len - filterStr.len - statusStr.len)), filterStr, statusStr, resetStyle)
+  stderr.styledWriteLine(styleBright, title, modeStr, " ".repeat(max(0, termW - title.len - modeStr.len - filterStr.len - statusStr.len)), filterStr, statusStr, resetStyle)
   stderr.setBackgroundColor(bgDefault)
 
   if filtered.len > 0:
@@ -312,7 +323,7 @@ proc render() =
   stderr.write "\x1b[" & $(listTopRow + visibleCount + 1) & ";1H"
   stderr.write "\x1b[0K"
   stderr.setForegroundColor(fgBlack, true)
-  stderr.write truncBytes(" Up/Down:move  Enter:choose  Right:fav  Left:unfav  Esc:quit  type:filter ", termW)
+  stderr.write truncBytes(" Up/Down:move  Enter:choose  Tab:sort  Right:fav  Left:unfav  Esc:quit  type:filter ", termW)
   stderr.resetAttributes()
   flushFile(stderr)
   prevBlockH = blockH
@@ -356,6 +367,9 @@ proc handleInput() =
       if filter.len > 0:
         filter = filter[0 .. ^2]
         applyFilter()
+    of 9: # Tab -> toggle sort: time <-> favorites first
+      sortMode = if sortMode == smTime: smFav else: smTime
+      applyFilter()
     of 27: # Escape
       cleanupForExit()
       quit(0)
@@ -383,6 +397,7 @@ proc main() =
     echo "  Enter         Print selected command and quit"
     echo "  Right         Add selected command to favorites"
     echo "  Left          Remove selected command from favorites"
+    echo "  Tab           Toggle sort: time / favorites first"
     echo "  Backspace     Delete filter character"
     echo "  Esc/Ctrl+C    Quit without selection"
     echo "  Any key       Filter (case-insensitive)"

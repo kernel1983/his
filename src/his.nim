@@ -144,12 +144,14 @@ proc removeFavorite(cmd: string) =
     saveFavorites()
 
 proc stripHistNumber(line: string): string =
-  # `history` output is "  123  command"; drop the leading line number.
+  # `history` (bash) output is "  123  command"; drop the leading line number
+  # only when at least 2 spaces follow it, so plain commands like "2 echo"
+  # piped from fish/zsh are not mangled.
   var i = 0
   while i < line.len and line[i] in {' ', '\t'}: inc i
   var j = i
   while j < line.len and line[j] in {'0'..'9'}: inc j
-  if j > i and j < line.len and line[j] in {' ', '\t'}:
+  if j > i and j + 1 < line.len and line[j] in {' ', '\t'} and line[j + 1] in {' ', '\t'}:
     var k = j
     while k < line.len and line[k] in {' ', '\t'}: inc k
     return line[k .. ^1]

@@ -26,7 +26,7 @@ bind -x '"\C-r":_his_widget' 2>/dev/null
 # `h`: pick a command and run it immediately.
 h() {
   local selected
-  selected=$(HISTTIMEFORMAT= history | command "$HIS_BIN")
+  selected=$(HISTTIMEFORMAT= history | command "$HIS_BIN" "$@")
   if [[ -n "$selected" ]]; then
     eval "$selected"
   fi

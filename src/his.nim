@@ -157,8 +157,11 @@ proc stripHistNumber(line: string): string =
     return line[k .. ^1]
   return line
 
-proc loadRawHistory(piped: bool): seq[string] =
-  if piped:
+proc loadRawHistory(piped: bool, fileArg: string): seq[string] =
+  if fileArg.len > 0:
+    for line in lines(fileArg):
+      result.add line
+  elif piped:
     for line in stdin.lines:
       result.add stripHistNumber(line)
   else:
@@ -390,8 +393,9 @@ proc main() =
   if args.len > 0 and args[0] in ["-h", "--help"]:
     echo "his - interactive shell history search"
     echo ""
-    echo "Reads history from stdin (e.g. `history | his`) or, if stdin is a"
-    echo "terminal, from $HISTFILE (~/.bash_history)."
+    echo "Reads history from stdin (e.g. `history | his`), from a file given as"
+    echo "the first argument, or, if stdin is a terminal, from $HISTFILE"
+    echo "(~/.bash_history)."
     echo ""
     echo "Keys:"
     echo "  Up/Down       Move cursor"
@@ -407,6 +411,14 @@ proc main() =
     echo "Shows a compact inline list; set HIS_LINES=N to change its height."
     echo "Favorites are stored one per line in " & (getHomeDir() / ".his_history")
     quit(0)
+
+  var fileArg = ""
+  if args.len > 0:
+    if fileExists(args[0]):
+      fileArg = args[0]
+    else:
+      stderr.writeLine "his: not a readable file: " & args[0]
+      quit(1)
 
   favPath = getHomeDir() / ".his_history"
   loadFavorites()
@@ -434,7 +446,7 @@ proc main() =
       stderr.writeLine "his: requires an interactive terminal"
       quit(1)
 
-  buildItems(loadRawHistory(piped))
+  buildItems(loadRawHistory(piped, fileArg))
 
   let (w, h) = terminalSize()
   termW = w

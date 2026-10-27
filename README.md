@@ -1,9 +1,13 @@
 # his
 
-An interactive shell-history search for your terminal, written in Nim. Ditch
-reaching for `Ctrl-R` over and over: type to filter, arrow to your command,
-and press Enter to put it back on the prompt — with **favorites** to pin the
-commands you use all the time.
+An interactive shell-history search for your terminal, written in Nim. Bash
+only writes history when the shell exits, so a second window can't `Ctrl-R`
+what you just ran in the first; `his` reads the live `history` of the current
+shell instead, so there's no need for `shopt -s histappend` /
+`PROMPT_COMMAND='history -a'` (and you get filtering, favorites, and a picker
+on top). Ditch reaching for `Ctrl-R` over and over: type to filter, arrow to
+your command, and press Enter to put it back on the prompt — with **favorites**
+to pin the commands you use all the time.
 
 `his` is a fork of [lscd](https://github.com/kernel1983/lscd) reworked from a
 directory browser into a history picker.
@@ -37,9 +41,9 @@ the chosen command directly.
   first** (favorites bubble to the top, relative order preserved).
 - **Filter by typing** — any key filters case-insensitively; prefix matches
   rank before substring matches.
-- **History from anywhere** — reads `history` piped from your shell (so the
-  current session's commands are included) or falls back to `$HISTFILE`
-  (`~/.bash_history`) when stdin is a terminal.
+- **History source** — reads a file passed as the first argument
+  (`his /path/to/file`), or `$HISTFILE` (`~/.bash_history`) when stdin is a
+  terminal. The shell wrapper feeds in the current session's commands.
 - **Clean stdout**: only the chosen command (no ANSI codes) is printed, so a
   shell wrapper can safely capture it.
 
@@ -100,15 +104,15 @@ export HIS_BIN=/some/other/place/his
 any pipeline you like:
 
 ```bash
-history | his          # include the current session's commands
-his                    # reads $HISTFILE / ~/.bash_history instead
+his                    # reads $HISTFILE / ~/.bash_history
+his /path/to/file      # read history from a specific file
 ```
 
 ## Usage
 
 ```text
 his
-history | his
+his /path/to/file
 ```
 
 ### Keys
@@ -135,10 +139,9 @@ history | his
 - Raw terminal input is handled manually via `termios` (or the Windows console
   API); escape sequences are parsed to read the arrow keys.
 - Rendering goes to **stderr**, so **stdout carries only the chosen command**.
-- History is read from **stdin** when it is piped (`history | his`), so the
-  current session's yet-unflushed commands are searchable too; otherwise it
-  falls back to `$HISTFILE`. Key input then comes from the controlling terminal
-  (`/dev/tty`).
+- History is read from a file (argument or `$HISTFILE`); the shell wrapper
+  feeds in the current session's commands. Key input comes from the controlling
+  terminal (`/dev/tty`) when stdin is not a tty.
 - Cursor position is queried (`ESC[6n`) to anchor the list; each render clears
   only the rows the widget occupies, so it never clears the whole screen.
 

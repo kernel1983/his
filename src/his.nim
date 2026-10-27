@@ -393,9 +393,8 @@ proc main() =
   if args.len > 0 and args[0] in ["-h", "--help"]:
     echo "his - interactive shell history search"
     echo ""
-    echo "Reads history from stdin (e.g. `history | his`), from a file given as"
-    echo "the first argument, or, if stdin is a terminal, from $HISTFILE"
-    echo "(~/.bash_history)."
+    echo "Reads history from a file given as the first argument, or, if stdin is"
+    echo "a terminal, from $HISTFILE (~/.bash_history)."
     echo ""
     echo "Keys:"
     echo "  Up/Down       Move cursor"
